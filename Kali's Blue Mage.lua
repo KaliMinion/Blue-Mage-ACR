@@ -178,8 +178,25 @@ local Gui = self.GUI
 local WindowStyle = self.GUI.WindowStyle
 
 self.Data = {
+	InitTime = 0,
 	Action = {},
 	ActionLogic = {},
+	MagicalExceptions = {
+		[11383] = true,
+		[11401] = true,
+		[11406] = true,
+		[11410] = true,
+		[11418] = true,
+		[11424] = true,
+		[18302] = true,
+		[18303] = true,
+		[18304] = true,
+		[18306] = true,
+		[18315] = true,
+		[18317] = true,
+		[18318] = true,
+		[18322] = true,
+	},
 	TableLoaded = false,
 	LastHotbarCheck = 0,
 	Hotbar = {},
@@ -241,15 +258,15 @@ self.Settings = {
 			enable = true
 		},
 		{
+			name = "DPS",
+			enable = true
+		},
+		{
 			name = "AoE",
 			enable = true
 		},
 		{
 			name = "Jumping",
-			enable = true
-		},
-		{
-			name = "Low Chance",
 			enable = true
 		},
 		{
@@ -259,7 +276,11 @@ self.Settings = {
 		{
 			name = "Physical",
 			enable = true
-		}
+		},
+		{
+			name = "Low Chance",
+			enable = true
+		},
 	},
 	ToggleSettings = {
 		Columns = 3,
@@ -360,6 +381,7 @@ self.Settings = {
 	SlideCastTime = 490,
 	--SwiftCastActions = {11397,18317},
 	SwiftCastActions = {[11397] = true,[18317] = true},
+	SwiftCastOptionalActions = {},
 	--BristleActions = {11386},
 	BristleActions = {[11386] = true},
 	InterruptIDs = {14265,14365,14369,14680,14712,14720,14744,14890,15045,15049,15063,15318,15321},
@@ -824,32 +846,32 @@ function self.isEnemyOnLine(player,entity,radius,angle,forcedHeading)
 	end
 	return V,LP,RP
 	--[[local function dist(a,b)
-		if valid(a,b) then
-			return Round(math.abs(math.sqrt(math.pow((b.x - a.x),2)+math.pow((b.z - a.z),2))),0.1)
-		end
-	end
-	local function IsBetween(a,b,c)
-		local ab,bc,ac = dist(a,b),dist(b,c),dist(a,c)
-		if ab + bc == ac then
-			return true
-		end
-		return false
-	end
+        if valid(a,b) then
+            return Round(math.abs(math.sqrt(math.pow((b.x - a.x),2)+math.pow((b.z - a.z),2))),0.1)
+        end
+    end
+    local function IsBetween(a,b,c)
+        local ab,bc,ac = dist(a,b),dist(b,c),dist(a,c)
+        if ab + bc == ac then
+            return true
+        end
+        return false
+    end
 
-	local leftPoint = {x = leftProjectedPoint[1], y = ppos.y, z = leftProjectedPoint[2]}
-	local rightPoint = {x = rightProjectedPoint[1], y = ppos.y, z = rightProjectedPoint[2]}
-	if IsBetween(ppos,leftPoint,left) then
-		local leftPos = RenderManager:WorldToScreen(leftPoint)
-		if valid(leftPos) then
-			GUI:AddCircleFilled(leftPos.x,leftPos.y,4,GUI:ColorConvertFloat4ToU32(1,1,0,1))
-		end
-	end
-	if IsBetween(ppos,rightPoint,right) then
-		local rightPos = RenderManager:WorldToScreen(rightPoint)
-		if valid(rightPos) then
-			GUI:AddCircleFilled(rightPos.x,rightPos.y,4,GUI:ColorConvertFloat4ToU32(1,1,0,1))
-		end
-	end]]
+    local leftPoint = {x = leftProjectedPoint[1], y = ppos.y, z = leftProjectedPoint[2]}
+    local rightPoint = {x = rightProjectedPoint[1], y = ppos.y, z = rightProjectedPoint[2]}
+    if IsBetween(ppos,leftPoint,left) then
+        local leftPos = RenderManager:WorldToScreen(leftPoint)
+        if valid(leftPos) then
+            GUI:AddCircleFilled(leftPos.x,leftPos.y,4,GUI:ColorConvertFloat4ToU32(1,1,0,1))
+        end
+    end
+    if IsBetween(ppos,rightPoint,right) then
+        local rightPos = RenderManager:WorldToScreen(rightPoint)
+        if valid(rightPos) then
+            GUI:AddCircleFilled(rightPos.x,rightPos.y,4,GUI:ColorConvertFloat4ToU32(1,1,0,1))
+        end
+    end]]
 end
 
 function self.IsEnemyInCone(player,entity,radius,angle,forcedHeading)
@@ -888,7 +910,7 @@ end
 
 function self.HpAdvantage(entity,low,med,high,vhigh,low2,med2,high2,vhigh2)
 	low,med,high,vhigh = low2 or 0.25, med2 or 0.5, high2 or 1.5, vhigh or 3
-	low2,med2,high2 = low or 80, med or 40, high or 20, vhigh2 or 0
+	low2,med2,high2,vhigh2 = low or 80, med or 40, high or 20, vhigh2 or 0
 	if self.Settings.Toggles[1].enable then
 		if valid(entity) then
 			if entity.contentid == 541 then return true end
@@ -1110,7 +1132,7 @@ function self.DrawEnemyCircle()
 end
 
 function self.ElConeCheck(angle,el,player,target,radius,Count,check1,check2)
-	if self.Settings.Toggles[2].enable then
+	if self.Settings.Toggles[3].enable then
 		local count,pos,ID,tID,Count = 0,{},0,0,Count or 1
 		if valid(target) then tID = target.id end
 		for id,entity in pairs(el) do
@@ -1144,7 +1166,7 @@ function self.ElConeCheck(angle,el,player,target,radius,Count,check1,check2)
 end
 
 function self.ElLineCheck(el,player,target,radius,range,Count,check1,check2)
-	if self.Settings.Toggles[2].enable then
+	if self.Settings.Toggles[3].enable then
 		local count,pos,nextTarget,tID,Count = 0,{},{},0,Count or 1
 		if valid(target) then tID = target.id end
 		for id,entity in pairs(el) do
@@ -1180,7 +1202,7 @@ function self.ElLineCheck(el,player,target,radius,range,Count,check1,check2)
 end
 
 function self.ElGroundCheck(el,player,target,range,radius,Count,check1,check2)
-	if self.Settings.Toggles[2].enable then
+	if self.Settings.Toggles[3].enable then
 		local count,pos,ppos,tID,id2,Count = 0,{},player.pos,0,0,Count or 1
 		if valid(target) then tID = target.id end
 		for id,entity in pairs(el) do
@@ -1328,7 +1350,7 @@ function self.Cast()
 			end
 		end
 	end
-	if (frame ~= lastframe) and (not MIsCasting() or time < delay) and (gStartCombat or Data.BattleState ~= 0) and current ~= 11424 and TimeSince(Data.LastCast[11424] or 0) > 500 and MissingBuffs(player,1722) then
+	if (frame ~= lastframe) and (not MIsCasting() or time < delay) and (gStartCombat or Data.BattleState ~= 0) and current ~= 11424 and TimeSince(Data.LastCast[11424] or 0) > 500 and MissingBuffs(player,1722) then -- TODO: Add non combat action support
 		lastframe = frame
 
 		local priority = self.Settings.ActionPriority
@@ -1341,22 +1363,26 @@ function self.Cast()
 			local toggles = self.Settings.Toggles
 			local magical,physical = toggles[5].enable, toggles[6].enable
 			local data = self.Settings.ActionData[id]
-			if cast and valid(data) and not Data.HotbarDisabled[id] and (magical or (not magical and data.AttackTypeTargetID ~= 5)) and (physical or (not physical and data.AttackTypeTargetID == 5)) then
+			if cast and valid(data) and not Data.HotbarDisabled[id] and (magical or (not magical and (data.AttackTypeTargetID ~= 5 or Data.MagicalExceptions[id]))) and (physical or (not physical and data.AttackTypeTargetID == 5)) then
 				--d(Data.LastCast[id])
 				--d(self.Settings.ActionDelays[id])
 				local action,enable,logic,lastcast,actiondelay = Data.Action[id], self.Settings.Actions[id2], Data.ActionLogic[id2], TimeSince(Data.LastCast[id] or 0), (self.Settings.ActionDelays[id2] or 0)
 				--d(tostring(action.name).." = id: "..tostring(id)..", id2: "..tostring(id2))
 				--d(action.name)
-				if enable and valid(action) and action.usable and lastcast > actiondelay and ((action.casttime ~= 0 and (not MIsMoving() or HasBuffs(player,167))) or action.casttime == 0) then
+				local isSwiftAction,isBristleAction = self.Settings.SwiftCastActions[id2], self.Settings.BristleActions[id2]
+				if enable and valid(action) and action.usable and lastcast > actiondelay and ((action.casttime ~= 0 and (not MIsMoving() or HasBuffs(player,167) or isSwiftAction)) or action.casttime == 0) then
+					--d(action.name)
 					local LogicReturn,target = logic()
 					if LogicReturn and valid(target) then
+						--d(action.name)
 						--local pass = false
 						local hasSwift,hasBristle = (TimeSince(Data.lastSwiftCast) < 400 or HasBuffs(player,167)), (TimeSince(Data.lastBristle) < 400 or HasBuffs(player,1716))
 						local isSwiftAction,isBristleAction = self.Settings.SwiftCastActions[id2], self.Settings.BristleActions[id2]
 						--d("["..id2.."] "..action.name.." = isSwiftAction: "..tostring(isSwiftAction)..", isBristleAction: "..tostring(isBristleAction))
 						if isSwiftAction then
+							local optional = self.Settings.SwiftCastOptionalActions[id2]
 							if not hasSwift then
-								LogicReturn = false
+								if not optional or (optional and MIsMoving()) then LogicReturn = false end
 								if (CD(7561) < precast) then
 									Data.lastSwiftCast = Now()
 									ActionList:Get(1,7561):Cast()
@@ -1543,6 +1569,7 @@ local function Checkbox(str,var,reverse)
 		if pressed then
 			tbl[key] = checked
 			save(true)
+			return checked,pressed
 		end
 	else
 		return GUI:Checkbox(str,var)
@@ -1568,7 +1595,7 @@ function self.Draw()
 	--	Player:Stop()
 	--end
 
-		--if ActionList:Get(1,11406).cd >= stop then
+	--if ActionList:Get(1,11406).cd >= stop then
 	--	if not moving then
 	--		moving = true
 	--		ml_global_information.Await(math.ceil(stop*1000),1,function()
@@ -1959,10 +1986,24 @@ function self.Draw()
 					end
 					GUI:PopItemWidth() GUI:SameLine(0,0)
 					GUI:Text(" ms")
-                    if id ~= 7561 then
-                        Space(15)
-                        Checkbox("Swiftcast", "Settings.SwiftCastActions["..id2.."]")
-                    end
+					if id ~= 7561 then
+						Space(15)
+						local SwiftCastOptional = self.Settings.SwiftCastOptionalActions[id2]
+						if SwiftCastOptional then
+							GUI:PushStyleColor(GUI.Col_CheckMark,1,1,0,0.95)
+						end
+						local checked,pressed = Checkbox("Swiftcast", "Settings.SwiftCastActions["..id2.."]")
+						if pressed then
+							if GUI:IsKeyDown(17) and checked then
+								self.Settings.SwiftCastOptionalActions[id2] = true
+							else
+								self.Settings.SwiftCastOptionalActions[id2] = false
+							end
+						end
+						if SwiftCastOptional then
+							GUI:PopStyleColor(1)
+						end
+					end
 					if id ~= 11393 then
 						Space(15)
 						Checkbox("Bristle", "Settings.BristleActions["..id2.."]")
@@ -2194,24 +2235,53 @@ function self.Draw()
 		local x = Settings.ButtonWidth + (Settings.HorizontalSpacing * 2)
 		GUI:Columns(Settings.Columns,"BLU Toggles",false)
 		for i=1,#Toggles do
-			local toggle = Toggles[i]
-			local name,enable = toggle.name,toggle.enable
-			GUI:SetColumnWidth(-1,x)
-			local r,g,b,a = 0,0,0,0
-			if enable then
-				r,g,b,a = Settings.EnabledColor.r,Settings.EnabledColor.g,Settings.EnabledColor.b,Settings.EnabledColor.a
-			else
-				r,g,b,a = Settings.DisabledColor.r,Settings.DisabledColor.g,Settings.DisabledColor.b,Settings.DisabledColor.a
-			end
+			if i ~= 2 then
+				local toggle = Toggles[i]
+				local name,enable = toggle.name,toggle.enable
+				GUI:SetColumnWidth(-1,x)
+				local r,g,b,a = 0,0,0,0
+				if enable then
+					r,g,b,a = Settings.EnabledColor.r,Settings.EnabledColor.g,Settings.EnabledColor.b,Settings.EnabledColor.a
+				else
+					r,g,b,a = Settings.DisabledColor.r,Settings.DisabledColor.g,Settings.DisabledColor.b,Settings.DisabledColor.a
+				end
 
-			GUI:PushStyleColor(GUI.Col_Button,r/255,g/255,b/255,a/255)
-			GUI:PushStyleColor(GUI.Col_ButtonHovered,r/255,g/255,b/255,a/255)
-			GUI:PushStyleColor(GUI.Col_ButtonActive,r/255,g/255,b/255,a/255)
-			if GUI:Button(name,Settings.ButtonWidth,Settings.ButtonHeight) then
-				self.Settings.Toggles[i].enable = not enable
+				GUI:PushStyleColor(GUI.Col_Button,r/255,g/255,b/255,a/255)
+				GUI:PushStyleColor(GUI.Col_ButtonHovered,r/255,g/255,b/255,a/255)
+				GUI:PushStyleColor(GUI.Col_ButtonActive,r/255,g/255,b/255,a/255)
+				if GUI:Button(name,Settings.ButtonWidth,Settings.ButtonHeight) then
+					self.Settings.Toggles[i].enable = not enable
+				end
+				GUI:PopStyleColor(3)
+				GUI:NextColumn()
+			elseif Data.Action[18322].usable then
+				local toggle = Toggles[i]
+				local name = toggle.name,toggle.enable
+				GUI:SetColumnWidth(-1,x)
+				local r,g,b,a = 0,0,0,0
+				if name == "DPS" then
+					r,g,b,a = 115,40,40,Settings.EnabledColor.a
+				elseif name == "Healer" then
+					r,g,b,a = 52,102,36,Settings.EnabledColor.a
+				elseif name == "Tank" then
+					r,g,b,a = 45,49,128,Settings.EnabledColor.a
+				end
+
+				GUI:PushStyleColor(GUI.Col_Button,r/255,g/255,b/255,a/255)
+				GUI:PushStyleColor(GUI.Col_ButtonHovered,r/255,g/255,b/255,a/255)
+				GUI:PushStyleColor(GUI.Col_ButtonActive,r/255,g/255,b/255,a/255)
+				if GUI:Button(name,Settings.ButtonWidth,Settings.ButtonHeight) then
+					if name == "DPS" then
+						self.Settings.Toggles[i].name = "Healer"
+					elseif name == "Healer" then
+						self.Settings.Toggles[i].name = "Tank"
+					else
+						self.Settings.Toggles[i].name = "DPS"
+					end
+				end
+				GUI:PopStyleColor(3)
+				GUI:NextColumn()
 			end
-			GUI:PopStyleColor(3)
-			GUI:NextColumn()
 		end
 		GUI:Columns(1)
 		GUI:PopStyleVar()
@@ -2504,16 +2574,20 @@ function self.OnLoad()
 	--Data.LastCast[last] = 0
 	Gui.main_tabs = GUI_CreateTabs("General,Actions,QT Settings,QT Customize,Hotbar Settings,Hotbar Customize",true)
 
+	--SkillMgr.GUI.manager.open = true
+end
+
+function self.OnUpdate(event, tickcount)
 	local file = ModulePath.."output.txt"
-
-	local cmd = io.popen([[PowerShell -Command "$ErrorActionPreference = """Stop"""; (New-Object System.Net.WebClient).DownloadString('https://xivapi.com/search?indexes=Action&filters=IsPlayerAction=1,ClassJobCategory.BLU=1&columns=Aspect,AttackTypeTargetID,CanTargetFriendly,CanTargetHostile,CanTargetParty,CanTargetSelf,TargetArea,AffectsPosition,Icon,ID,Name&sort_field=ID') | Out-File -Encoding ASCII -FilePath """]]..file..[[""""]]),{}
-
-	ml_global_information.Await(5000, function ()
-		if io.type(cmd) == "file" and not self.Data.TableLoaded then
+	if Data.TableLoaded then
+	elseif Data.InitTime ~= 0 and TimeSince(Data.InitTime) > 5000 then
+		local cmd = self.cmd
+		if io.type(cmd) == "file" then
 			local exists = FileExists(file)
 			if exists then
 				local File = io.open(file,"r")
 				local tbl = loadstring("local tbl = "..File:read("*a"):gsub("%[","{"):gsub("%]","}"):gsub("null","nil"):gsub("\":","\"%]="):gsub("{\"","{%[\""):gsub(",\"",",%[\"").."return tbl")() File:close() cmd:close()
+				Data.InitTime = Now()
 				if valid(tbl) and table.size(tbl) > 1 then
 					tbl = tbl.Results
 					local url = ""
@@ -2533,20 +2607,23 @@ function self.OnLoad()
 						end
 					end
 					if #url ~= 0 then
-						local cmd = io.popen([[PowerShell -Command "$ErrorActionPreference = """Stop"""; $urls = ]]..url..[[; $client = New-Object System.Net.WebClient; ForEach ($url in $urls) { $filename = Split-Path $url -leaf; $client.DownloadFile($url,"""]]..ImageFolder..[[$($filename)"""); Start-Sleep -Milliseconds 50}"]])
+						cmd = io.popen([[PowerShell -Command "$ErrorActionPreference = """Stop"""; $urls = ]]..url..[[; $client = New-Object System.Net.WebClient; ForEach ($url in $urls) { $filename = Split-Path $url -leaf; $client.DownloadFile($url,"""]]..ImageFolder..[[$($filename)"""); Start-Sleep -Milliseconds 50}"]])
 						cmd:close()
 					end
-					self.Data.TableLoaded = true
+					Data.TableLoaded = true
 				end
 				return true
 			end
 		end
-	end)
+	elseif Data.InitTime == 0 then
+		Data.InitTime = Now()
 
-	--SkillMgr.GUI.manager.open = true
+		self.cmd = io.popen([[PowerShell -Command "$ErrorActionPreference = """Stop"""; (New-Object System.Net.WebClient).DownloadString('https://xivapi.com/search?indexes=Action&filters=IsPlayerAction=1,ClassJobCategory.BLU=1&columns=Aspect,AttackTypeTargetID,CanTargetFriendly,CanTargetHostile,CanTargetParty,CanTargetSelf,TargetArea,AffectsPosition,Icon,ID,Name&sort_field=ID') | Out-File -Encoding ASCII -FilePath """]]..file..[[""""]]),{}
+
+	end
 end
 
-return table.deepcopy(BLU)
+return BLU
 
 --[[
 
