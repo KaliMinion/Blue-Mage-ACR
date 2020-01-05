@@ -681,7 +681,7 @@ function self.TestAction(action)
 	if type == "number" then
 		local id = action
 		local action = self.Data.Action[action]
-		local LogicReturn,target = Data.ActionLogic[id]()
+		local LogicReturn,target,pos = Data.ActionLogic[id]()
 		d("["..id.."] Casting Logic = "..tostring(LogicReturn))
 		if LogicReturn then
 			if valid(target) then
@@ -694,11 +694,11 @@ function self.TestAction(action)
 					hostile = extra.CanTargetHostile or false
 					area = extra.TargetArea or false
 				end
-				if type == 5 or target.x then -- hostile
+				if type == 5 or pos then -- hostile
 					if hostile and tid then
 						action:Cast(tid)
-					elseif area and target.x then
-						action:Cast(target.x, target.y, target.z)
+					elseif area and pos.x then
+						action:Cast(pos.x, pos.y, pos.z)
 					end
 				elseif type == 2 or type == 4 then -- friendly
 					if Self and tid == Player.id then
@@ -1228,12 +1228,45 @@ function self.ElGroundCheck(el,player,target,range,radius,Count,check1,check2)
 					end
 				end
 				if count2 > count or (count2 == count and id == tID) then
-					count,pos,id2 = count2,epos,id
+					count,pos,id2 = count2,epos,entity
 				end
 			end
 		end
 		if count > Count then
-			return true,pos,id2
+			return true,id2,pos
+		end
+	end
+end
+
+
+
+function self.ElAroundTargetCheck(el,player,target,range,radius,Count,check1,check2)
+	if self.Settings.Toggles[3].enable then
+		local count,ppos,tID,id2,Count = 0,player.pos,0,0,Count or 1
+		if valid(target) then tID = target.id end
+		for id,entity in pairs(el) do
+			if ValidEntity(player,target,entity,range,check1) then
+				local count2 = 0
+				for id2,entity2 in pairs(el) do
+					if ValidEntity(entity,target,entity2,radius + entity2.hitradius,nil,true) then
+						local c = 1
+						if id2 == tID then c = 2 end
+						if type(check2) == "function" then
+							if check2(entity2) then
+								count2 = count2 + c
+							end
+						else
+							count2 = count2 + c
+						end
+					end
+				end
+				if count2 > count or (count2 == count and id == tID) then
+					count,id2 = count2,entity
+				end
+			end
+		end
+		if count > Count then
+			return true,id2
 		end
 	end
 end
@@ -1363,6 +1396,7 @@ function self.Cast()
 			local toggles = self.Settings.Toggles
 			local magical,physical = toggles[5].enable, toggles[6].enable
 			local data = self.Settings.ActionData[id]
+			local cd = CD(id)
 			if cast and valid(data) and not Data.HotbarDisabled[id] and (magical or (not magical and (data.AttackTypeTargetID ~= 5 or Data.MagicalExceptions[id]))) and (physical or (not physical and data.AttackTypeTargetID == 5)) then
 				--d(Data.LastCast[id])
 				--d(self.Settings.ActionDelays[id])
@@ -1370,10 +1404,10 @@ function self.Cast()
 				--d(tostring(action.name).." = id: "..tostring(id)..", id2: "..tostring(id2))
 				--d(action.name)
 				local isSwiftAction,isBristleAction = self.Settings.SwiftCastActions[id2], self.Settings.BristleActions[id2]
-				if enable and valid(action) and action.usable and lastcast > actiondelay and ((action.casttime ~= 0 and (not MIsMoving() or HasBuffs(player,167) or isSwiftAction)) or action.casttime == 0) then
+				if enable and valid(action) and action.usable and lastcast > actiondelay and ((action.casttime ~= 0 and (not MIsMoving() or HasBuffs(player,167) or isSwiftAction)) or action.casttime == 0) and (cd <= ((precast * 2) + delay)) then
 					--d(action.name)
-					local LogicReturn,target = logic()
-					if LogicReturn and valid(target) then
+					local LogicReturn,target,pos = logic()
+					if LogicReturn and valid(target) and (data.AttackTypeTargetID == 5 or MissingBuffs(target,"1307")) and (data.AttackTypeTargetID ~= 5 or MissingBuffs(target,"556")) then
 						--d(action.name)
 						--local pass = false
 						local hasSwift,hasBristle = (TimeSince(Data.lastSwiftCast) < 400 or HasBuffs(player,167)), (TimeSince(Data.lastBristle) < 400 or HasBuffs(player,1716))
@@ -1402,7 +1436,7 @@ function self.Cast()
 							end
 						elseif hasBristle then LogicReturn = false
 						end
-						if CD(id) > precast then
+						if cd > precast then
 							--pass = true
 							LogicReturn = false
 						end
@@ -1427,17 +1461,19 @@ function self.Cast()
 								hostile = extra.CanTargetHostile or false
 								area = extra.TargetArea or false
 							end
-							if type == 5 or target.x then -- hostile
-								if hostile and tid then
+							if type == 5 or (valid(pos) and pos.x) then -- hostile
+								if hostile and tid and(not valid(pos) or not pos.x) then
 									--if cast then
 									--ml_error(tostring(GUI:GetFrameCount()).." "..action.name..", CD(id): "..tostring(CD(id)))
 									--cast = false action:Cast(tid) break end
 									action:Cast(tid) break
-								elseif area and target.x then
+								elseif area and (valid(pos) and pos.x) then
 									--if cast then
 									--ml_error(tostring(GUI:GetFrameCount()).." "..action.name..", CD(id): "..tostring(CD(id)))
 									--cast = false action:Cast(target.x, target.y, target.z) break end
-									action:Cast(target.x, target.y, target.z) break
+									action:Cast(pos.x, pos.y, pos.z) break
+								else
+									ml_error("Action: ["..id.."] "..Data.Action[id].name.." made it through type 5 target with no valid cast logic.")
 								end
 							elseif type == 2 or type == 4 then -- friendly
 								if Self and tid == player.id then
@@ -1451,7 +1487,11 @@ function self.Cast()
 									--ml_error(tostring(GUI:GetFrameCount()).." "..action.name..", CD(id): "..tostring(CD(id)))
 									--cast = false action:Cast(tid) break end
 									action:Cast(tid) break
+								else
+									ml_error("Action: ["..id.."] "..Data.Action[id].name.." made it through type 2 or 4 target with no valid cast logic.")
 								end
+							else
+								ml_error("Action: ["..id.."] "..Data.Action[id].name.." made it through with no target type with no valid cast logic.")
 							end
 						end
 					end
