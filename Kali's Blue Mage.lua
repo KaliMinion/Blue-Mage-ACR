@@ -229,6 +229,7 @@ self.Data = {
 	lastcast = 0,
 	lastGCDcast = 0,
 	LastCast = {},
+	LastAttempt = {},
 	lastInterruptTarget = 0,
 	lastStunTarget = 0,
 	lastSwiftCast = 0,
@@ -1404,7 +1405,24 @@ function self.Cast()
 				--d(tostring(action.name).." = id: "..tostring(id)..", id2: "..tostring(id2))
 				--d(action.name)
 				local isSwiftAction,isBristleAction = self.Settings.SwiftCastActions[id2], self.Settings.BristleActions[id2]
-				if enable and valid(action) and action.usable and lastcast > actiondelay and ((action.casttime ~= 0 and (not MIsMoving() or HasBuffs(player,167) or isSwiftAction)) or action.casttime == 0) and (cd <= ((precast * 2) + delay)) then
+				local SurpanakhaActive = function()
+					local last = Data.LastCast[18323]
+					local action,lastcast = Data.Action[18323],TimeSince(last or 0)
+					if valid(action) then
+						local cd,LastAttempt = action.cd,TimeSince(Data.LastAttempt[18323] or 0)
+						if (cd == 0 and id == 18323) or (cd > 30 and LastAttempt < 1250) then
+							local ValidActions = {18323}
+							if table.contains(ValidActions,id) then
+								return true,false
+							else return true,true
+							end
+						end
+					end
+					return false,false
+				end
+				local SurpActive,BlockAction = SurpanakhaActive()
+				--if BlockAction then d("["..id.."]: SurpActive = "..tostring(SurpActive)..", BlockAction = "..tostring(BlockAction)) end
+				if enable and not BlockAction and valid(action) and action.usable and ((lastcast > actiondelay) or SurpActive) and ((action.casttime ~= 0 and (not MIsMoving() or HasBuffs(player,167) or isSwiftAction)) or action.casttime == 0) and ((cd <= ((precast * 2) + delay)) or SurpActive) then
 					--d(action.name)
 					local LogicReturn,target,pos = logic()
 					if LogicReturn and valid(target) and (data.AttackTypeTargetID == 5 or MissingBuffs(target,"1307")) and (data.AttackTypeTargetID ~= 5 or MissingBuffs(target,"556")) then
@@ -1428,7 +1446,7 @@ function self.Cast()
 						if isBristleAction then
 							if not hasBristle then
 								LogicReturn = false
-								if (CD(11393) < precast) then
+								if (CD(11393) < precast) and Data.lastcast ~= 18323 then
 									Data.lastBristle = Now()
 									ActionList:Get(1,11393):Cast()
 									break
@@ -1436,9 +1454,15 @@ function self.Cast()
 							end
 						elseif hasBristle then LogicReturn = false
 						end
-						if cd > precast then
+						if cd > precast and id ~= 18323 then
 							--pass = true
 							LogicReturn = false
+						--elseif id == 18323 then
+						--	local cd,cdmax,lastcast = action.cd,action.cdmax,Data.LastCast[id]
+						--	if cdmax ~= 0 and MissingBuffs(player,2130) and TimeSince(lastcast or 0) > 1000 then
+						--		ml_error("Failed Surpanakha Check")
+						--		LogicReturn = false
+						--	end
 						end
 
 						--if pass then
@@ -1452,6 +1476,7 @@ function self.Cast()
 							--d("CD(id): "..tostring(CD(id)))
 							--d("precast: "..tostring(precast))
 							--d(action.name)
+							Data.LastAttempt[id] = Now()
 							local tid,type = target.id, target.chartype
 							local extra = self.Settings.ActionData[id]
 							local Self,party,hostile,area
@@ -1560,7 +1585,7 @@ function self.CastCheck()
 				local act = ActionList:Get(1,id)
 				if valid(act) then
 					local cd = act.cooldowngroup
-					--d("Casting: "..id..", time: "..time)
+					--d("["..tostring(os.clock()).."] Casting: "..id..", time: "..time)
 
 					if cd == 58 then
 						if Data.lastGCDcast ~= id then Data.lastGCDcast = id end
@@ -1854,7 +1879,7 @@ function self.Draw()
 				for i=1,size do
 					local id,id2 = tbl[i],tbl[i] -- id = short id no duplicates, id2 = long id to include duplicates
 					if id > 100000 then id = tonumber(string.sub(id,2)) end
-					local x,y = GUI:CalcTextSize(tostring(i)..": "..Data.Action[id].name.." ["..tostring(id).."]")
+					local x,y = GUI:CalcTextSize(tostring(i)..": "..Data.Action[id].name.." ["..tostring(id).."] (#)")
 					if x > s then s = x end
 				end
 				GUI:PushItemWidth(s + style.itemspacing.x + style.framepadding.x + style.scrollbarsize)
