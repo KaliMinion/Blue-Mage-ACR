@@ -846,33 +846,6 @@ function self.isEnemyOnLine(player,entity,radius,angle,forcedHeading)
 	elseif Distance3D(epos,ppos,true) <= (eRadius) then V = true --return true
 	end
 	return V,LP,RP
-	--[[local function dist(a,b)
-        if valid(a,b) then
-            return Round(math.abs(math.sqrt(math.pow((b.x - a.x),2)+math.pow((b.z - a.z),2))),0.1)
-        end
-    end
-    local function IsBetween(a,b,c)
-        local ab,bc,ac = dist(a,b),dist(b,c),dist(a,c)
-        if ab + bc == ac then
-            return true
-        end
-        return false
-    end
-
-    local leftPoint = {x = leftProjectedPoint[1], y = ppos.y, z = leftProjectedPoint[2]}
-    local rightPoint = {x = rightProjectedPoint[1], y = ppos.y, z = rightProjectedPoint[2]}
-    if IsBetween(ppos,leftPoint,left) then
-        local leftPos = RenderManager:WorldToScreen(leftPoint)
-        if valid(leftPos) then
-            GUI:AddCircleFilled(leftPos.x,leftPos.y,4,GUI:ColorConvertFloat4ToU32(1,1,0,1))
-        end
-    end
-    if IsBetween(ppos,rightPoint,right) then
-        local rightPos = RenderManager:WorldToScreen(rightPoint)
-        if valid(rightPos) then
-            GUI:AddCircleFilled(rightPos.x,rightPos.y,4,GUI:ColorConvertFloat4ToU32(1,1,0,1))
-        end
-    end]]
 end
 
 function self.IsEnemyInCone(player,entity,radius,angle,forcedHeading)
@@ -1424,99 +1397,102 @@ function self.Cast()
 				--if BlockAction then d("["..id.."]: SurpActive = "..tostring(SurpActive)..", BlockAction = "..tostring(BlockAction)) end
 				if enable and not BlockAction and valid(action) and action.usable and ((lastcast > actiondelay) or SurpActive) and ((action.casttime ~= 0 and (not MIsMoving() or HasBuffs(player,167) or isSwiftAction)) or action.casttime == 0) and ((cd <= ((precast * 2) + delay)) or SurpActive) then
 					--d(action.name)
-					local LogicReturn,target,pos = logic()
-					if LogicReturn and valid(target) and (data.AttackTypeTargetID == 5 or MissingBuffs(target,"1307")) and (data.AttackTypeTargetID ~= 5 or MissingBuffs(target,"556")) then
-						--d(action.name)
-						--local pass = false
-						local hasSwift,hasBristle = (TimeSince(Data.lastSwiftCast) < 400 or HasBuffs(player,167)), (TimeSince(Data.lastBristle) < 400 or HasBuffs(player,1716))
-						local isSwiftAction,isBristleAction = self.Settings.SwiftCastActions[id2], self.Settings.BristleActions[id2]
-						--d("["..id2.."] "..action.name.." = isSwiftAction: "..tostring(isSwiftAction)..", isBristleAction: "..tostring(isBristleAction))
-						if isSwiftAction then
-							local optional = self.Settings.SwiftCastOptionalActions[id2]
-							if not hasSwift then
-								if not optional or (optional and MIsMoving()) then LogicReturn = false end
-								if (CD(7561) < precast) then
-									Data.lastSwiftCast = Now()
-									ActionList:Get(1,7561):Cast()
-									break
-								end
-							end
-						elseif hasSwift then LogicReturn = false
-						end
-						if isBristleAction then
-							if not hasBristle then
-								LogicReturn = false
-								if (CD(11393) < precast) and Data.lastcast ~= 18323 then
-									Data.lastBristle = Now()
-									ActionList:Get(1,11393):Cast()
-									break
-								end
-							end
-						elseif hasBristle then LogicReturn = false
-						end
-						if cd > precast and id ~= 18323 then
-							--pass = true
-							LogicReturn = false
-						--elseif id == 18323 then
-						--	local cd,cdmax,lastcast = action.cd,action.cdmax,Data.LastCast[id]
-						--	if cdmax ~= 0 and MissingBuffs(player,2130) and TimeSince(lastcast or 0) > 1000 then
-						--		ml_error("Failed Surpanakha Check")
-						--		LogicReturn = false
-						--	end
-						end
-
-						--if pass then
-						--	local LogicReturn,target
-						--	if logic ~= nil then
-						--		LogicReturn,target = logic()
-						--	else
-						--		LogicReturn = true
-						--	end
-						if LogicReturn then
-							--d("CD(id): "..tostring(CD(id)))
-							--d("precast: "..tostring(precast))
+					--local LogicReturn,target,pos = assert(logic(),"["..selfslong.."] Action ["..action.id.."] "..action.name.." logic is not valid.")
+					if logic then
+						local LogicReturn,target,pos = logic()
+						if LogicReturn and valid(target) and (data.AttackTypeTargetID == 5 or MissingBuffs(target,"1307")) and (data.AttackTypeTargetID ~= 5 or MissingBuffs(target,"556")) then
 							--d(action.name)
-							Data.LastAttempt[id] = Now()
-							local tid,type = target.id, target.chartype
-							local extra = self.Settings.ActionData[id]
-							local Self,party,hostile,area
-							if valid(extra) then
-								Self = extra.CanTargetSelf or false
-								party = extra.CanTargetParty or false
-								hostile = extra.CanTargetHostile or false
-								area = extra.TargetArea or false
+							--local pass = false
+							local hasSwift,hasBristle = (TimeSince(Data.lastSwiftCast) < 400 or HasBuffs(player,167)), (TimeSince(Data.lastBristle) < 400 or HasBuffs(player,1716))
+							local isSwiftAction,isBristleAction = self.Settings.SwiftCastActions[id2], self.Settings.BristleActions[id2]
+							--d("["..id2.."] "..action.name.." = isSwiftAction: "..tostring(isSwiftAction)..", isBristleAction: "..tostring(isBristleAction))
+							if isSwiftAction then
+								local optional = self.Settings.SwiftCastOptionalActions[id2]
+								if not hasSwift then
+									if not optional or (optional and MIsMoving()) then LogicReturn = false end
+									if (CD(7561) < precast) then
+										Data.lastSwiftCast = Now()
+										ActionList:Get(1,7561):Cast()
+										break
+									end
+								end
+							elseif hasSwift then LogicReturn = false
 							end
-							if type == 5 or (valid(pos) and pos.x) then -- hostile
-								if hostile and tid and(not valid(pos) or not pos.x) then
-									--if cast then
-									--ml_error(tostring(GUI:GetFrameCount()).." "..action.name..", CD(id): "..tostring(CD(id)))
-									--cast = false action:Cast(tid) break end
-									action:Cast(tid) break
-								elseif area and (valid(pos) and pos.x) then
-									--if cast then
-									--ml_error(tostring(GUI:GetFrameCount()).." "..action.name..", CD(id): "..tostring(CD(id)))
-									--cast = false action:Cast(target.x, target.y, target.z) break end
-									action:Cast(pos.x, pos.y, pos.z) break
-								else
-									ml_error("Action: ["..id.."] "..Data.Action[id].name.." made it through type 5 target with no valid cast logic.")
+							if isBristleAction then
+								if not hasBristle then
+									LogicReturn = false
+									if (CD(11393) < precast) and Data.lastcast ~= 18323 then
+										Data.lastBristle = Now()
+										ActionList:Get(1,11393):Cast()
+										break
+									end
 								end
-							elseif type == 2 or type == 4 then -- friendly
-								if Self and tid == player.id then
-									if id == 7561 then Data.lastSwiftCast = now usedSwift = true end
-									--if cast then
-									--ml_error(tostring(GUI:GetFrameCount()).." "..action.name..", CD(id): "..tostring(CD(id)))
-									--cast = false action:Cast(tid) break end
-									action:Cast(tid) break
-								elseif party and tid then
-									--if cast then
-									--ml_error(tostring(GUI:GetFrameCount()).." "..action.name..", CD(id): "..tostring(CD(id)))
-									--cast = false action:Cast(tid) break end
-									action:Cast(tid) break
-								else
-									ml_error("Action: ["..id.."] "..Data.Action[id].name.." made it through type 2 or 4 target with no valid cast logic.")
+							elseif hasBristle then LogicReturn = false
+							end
+							if cd > precast and id ~= 18323 then
+								--pass = true
+								LogicReturn = false
+								--elseif id == 18323 then
+								--	local cd,cdmax,lastcast = action.cd,action.cdmax,Data.LastCast[id]
+								--	if cdmax ~= 0 and MissingBuffs(player,2130) and TimeSince(lastcast or 0) > 1000 then
+								--		ml_error("Failed Surpanakha Check")
+								--		LogicReturn = false
+								--	end
+							end
+
+							--if pass then
+							--	local LogicReturn,target
+							--	if logic ~= nil then
+							--		LogicReturn,target = logic()
+							--	else
+							--		LogicReturn = true
+							--	end
+							if LogicReturn then
+								--d("CD(id): "..tostring(CD(id)))
+								--d("precast: "..tostring(precast))
+								--d(action.name)
+								Data.LastAttempt[id] = Now()
+								local tid,type = target.id, target.chartype
+								local extra = self.Settings.ActionData[id]
+								local Self,party,hostile,area
+								if valid(extra) then
+									Self = extra.CanTargetSelf or false
+									party = extra.CanTargetParty or false
+									hostile = extra.CanTargetHostile or false
+									area = extra.TargetArea or false
 								end
-							else
-								ml_error("Action: ["..id.."] "..Data.Action[id].name.." made it through with no target type with no valid cast logic.")
+								if type == 5 or (valid(pos) and pos.x) then -- hostile
+									if hostile and tid and(not valid(pos) or not pos.x) then
+										--if cast then
+										--ml_error(tostring(GUI:GetFrameCount()).." "..action.name..", CD(id): "..tostring(CD(id)))
+										--cast = false action:Cast(tid) break end
+										action:Cast(tid) break
+									elseif area and (valid(pos) and pos.x) then
+										--if cast then
+										--ml_error(tostring(GUI:GetFrameCount()).." "..action.name..", CD(id): "..tostring(CD(id)))
+										--cast = false action:Cast(target.x, target.y, target.z) break end
+										action:Cast(pos.x, pos.y, pos.z) break
+									else
+										ml_error("Action: ["..id.."] "..Data.Action[id].name.." made it through type 5 target with no valid cast logic.")
+									end
+								elseif type == 2 or type == 4 then -- friendly
+									if Self and tid == player.id then
+										if id == 7561 then Data.lastSwiftCast = now usedSwift = true end
+										--if cast then
+										--ml_error(tostring(GUI:GetFrameCount()).." "..action.name..", CD(id): "..tostring(CD(id)))
+										--cast = false action:Cast(tid) break end
+										action:Cast(tid) break
+									elseif party and tid then
+										--if cast then
+										--ml_error(tostring(GUI:GetFrameCount()).." "..action.name..", CD(id): "..tostring(CD(id)))
+										--cast = false action:Cast(tid) break end
+										action:Cast(tid) break
+									else
+										ml_error("Action: ["..id.."] "..Data.Action[id].name.." made it through type 2 or 4 target with no valid cast logic.")
+									end
+								else
+									ml_error("Action: ["..id.."] "..Data.Action[id].name.." made it through with no target type with no valid cast logic.")
+								end
 							end
 						end
 					end
@@ -2192,23 +2168,23 @@ function self.Draw()
 						for w in func.str:gmatch("\n--- DO NOT EDIT ABOVE THIS LINE ---\n(.+)$") do str = str..w end
 						func.str = str
 					end
-					GUI:SameLine(0,0)
-					local str = "Edit in Notepad++"
-					local strX,strY = GUI:CalcTextSize(str)
-					local winX = GUI:GetContentRegionAvailWidth()
-					local padX,padY = style.framepadding.x, style.framepadding.y
-					GUI:SameLine(0,winX - (strX + (padX * 2)))
-					--GUI:SameLine(0,30)
-					if GUI:Button(str,strX + (padX * 2), strY + (padY * 2)) then
-						local message3 = "`n-- Remember to copy your changes and paste them into the game after you finish --`n                                    -- 3 --"
-						local message2 = "`n-- Remember to copy your changes and paste them into the game after you finish --`n                                    -- 2 --"
-						local message1 = "`n-- Remember to copy your changes and paste them into the game after you finish --`n                                    -- 1 --"
-						local code = func.str:gsub("\n","`n"):gsub("\"","`\\\""):gsub("\t\t","    ")
-						--GUI:SetClipboardText(func.str)
-						local paste = "[void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); [System.Windows.Forms.SendKeys]::SendWait('^{a}'); [System.Windows.Forms.SendKeys]::SendWait('^{v}')"
-						local PS = io.popen([[powershell -Command "Set-Clipboard -Value """]]..message3..[["""; $process = Start-Process 'notepad++' -PassThru -ArgumentList '-llua -multiInst -noPlugin -nosession'; $process.WaitForInputIdle(); ]]..paste..[[; Start-Sleep -Milliseconds 500; Set-Clipboard -Value """]]..message2..[["""; ]]..paste..[[; Start-Sleep -Milliseconds 500; Set-Clipboard -Value """]]..message1..[["""; ]]..paste..[[; Start-Sleep -Milliseconds 500; Set-Clipboard -Value """]]..code..[["""; ]]..paste..[[;"]])
-						PS:close()
-					end
+					--GUI:SameLine(0,0)
+					--local str = "Edit in Notepad++"
+					--local strX,strY = GUI:CalcTextSize(str)
+					--local winX = GUI:GetContentRegionAvailWidth()
+					--local padX,padY = style.framepadding.x, style.framepadding.y
+					--GUI:SameLine(0,winX - (strX + (padX * 2)))
+					----GUI:SameLine(0,30)
+					--if GUI:Button(str,strX + (padX * 2), strY + (padY * 2)) then
+					--	local message3 = "`n-- Remember to copy your changes and paste them into the game after you finish --`n                                    -- 3 --"
+					--	local message2 = "`n-- Remember to copy your changes and paste them into the game after you finish --`n                                    -- 2 --"
+					--	local message1 = "`n-- Remember to copy your changes and paste them into the game after you finish --`n                                    -- 1 --"
+					--	local code = func.str:gsub("\n","`n"):gsub("\"","`\\\""):gsub("\t\t","    ")
+					--	--GUI:SetClipboardText(func.str)
+					--	local paste = "[void][System.Reflection.Assembly]::LoadWithPartialName('System.Windows.Forms'); [System.Windows.Forms.SendKeys]::SendWait('^{a}'); [System.Windows.Forms.SendKeys]::SendWait('^{v}')"
+					--	local PS = io.popen([[powershell -Command "Set-Clipboard -Value """]]..message3..[["""; $process = Start-Process 'notepad++' -PassThru -ArgumentList '-llua -multiInst -noPlugin -nosession'; $process.WaitForInputIdle(); ]]..paste..[[; Start-Sleep -Milliseconds 500; Set-Clipboard -Value """]]..message2..[["""; ]]..paste..[[; Start-Sleep -Milliseconds 500; Set-Clipboard -Value """]]..message1..[["""; ]]..paste..[[; Start-Sleep -Milliseconds 500; Set-Clipboard -Value """]]..code..[["""; ]]..paste..[[;"]])
+					--	PS:close()
+					--end
 
 					local x,y = GUI:GetContentRegionAvail()
 					--local str,changed = GUI:InputTextMultiline("##func", func.str, x, y - (GUI:GetTextLineHeightWithSpacing() + style.itemspacing.y + style.framepadding.y * 2))
@@ -2402,15 +2378,11 @@ function self.Draw()
 		--GUI:Columns(Settings.Columns,"BLU Hotbar",false)
 		local canclick = true
 		for i=1,#Hotbar do
-			--GUI:SetColumnWidth(-1,x)
-			--if i == 1 or i == 5 then GUI:NextColumn() GUI:NextColumn() GUI:NextColumn() GUI:NextColumn() end
 			local button = Hotbar[i]
 			local id,hovered,clicked,enabled = button.id,button.hovered,button.clicked,button.enabled
 			local action = Data.Action[id]
 			local data = self.Settings.ActionData[id]
 			if valid(2,action,data) then
-				--local name,enable = toggle.name,toggle.enable
-
 				local image = {
 					filepath = ImageFolder..(data.Icon):match("^.+/(.+)$"),
 					sizeX = 40,
@@ -2568,7 +2540,6 @@ function self.Draw()
 					GUI:Image(image2.filepath, image2.sizeX, image2.sizeY, image2.UV0_x, image2.UV0_y, image2.UV1_x, image2.UV1_y, image2.bg_col_R, image2.bg_col_G, image2.bg_col_B, image2.bg_col_A, image2.tint_col_R, image2.tint_col_G, image2.tint_col_B, image2.tint_col_A)
 				end
 			end
-			--GUI:NextColumn()
 		end
 		--GUI:Columns(1)
 		GUI:PopStyleVar()
@@ -2642,10 +2613,11 @@ function self.OnLoad()
 	--SkillMgr.GUI.manager.open = true
 end
 
+local page = 1
 function self.OnUpdate(event, tickcount)
 	local file = ModulePath.."output.txt"
 	if Data.TableLoaded then
-	elseif Data.InitTime ~= 0 and TimeSince(Data.InitTime) > 5000 then
+	elseif Data.InitTime ~= 0 and TimeSince(Data.InitTime) > 5000 then -- This is why the hotbar loads slow
 		local cmd = self.cmd
 		if io.type(cmd) == "file" then
 			local exists = FileExists(file)
@@ -2654,10 +2626,11 @@ function self.OnUpdate(event, tickcount)
 				local tbl = loadstring("local tbl = "..File:read("*a"):gsub("%[","{"):gsub("%]","}"):gsub("null","nil"):gsub("\":","\"%]="):gsub("{\"","{%[\""):gsub(",\"",",%[\"").."return tbl")() File:close() cmd:close()
 				Data.InitTime = Now()
 				if valid(tbl) and table.size(tbl) > 1 then
-					tbl = tbl.Results
+					local Pagination,Results = tbl.Pagination,tbl.Results
+					--tbl = tbl.Results
 					local url = ""
-					for i=1,#tbl do
-						local t = tbl[i]
+					for i=1,#Results do
+						local t = Results[i]
 						for k,v in pairs(t) do
 							if v == 0 then t[k] = false elseif v == 1 then t[k] = true end
 						end
@@ -2675,14 +2648,20 @@ function self.OnUpdate(event, tickcount)
 						cmd = io.popen([[PowerShell -Command "$ErrorActionPreference = """Stop"""; $urls = ]]..url..[[; $client = New-Object System.Net.WebClient; ForEach ($url in $urls) { $filename = Split-Path $url -leaf; $client.DownloadFile($url,"""]]..ImageFolder..[[$($filename)"""); Start-Sleep -Milliseconds 50}"]])
 						cmd:close()
 					end
-					Data.TableLoaded = true
+					if Pagination.Page ~= Pagination.PageTotal then
+						Data.InitTime = Now()
+						page = Pagination.PageNext
+						self.cmd = io.popen([[PowerShell -Command "$ErrorActionPreference = """Stop"""; (New-Object System.Net.WebClient).DownloadString('https://xivapi.com/search?indexes=Action&filters=IsPlayerAction=1,ClassJobCategory.BLU=1&columns=Aspect,AttackTypeTargetID,CanTargetFriendly,CanTargetHostile,CanTargetParty,CanTargetSelf,TargetArea,AffectsPosition,Icon,ID,Name&sort_field=ID&page=]]..page..[[') | Out-File -Encoding ASCII -FilePath """]]..file..[[""""]]),{}
+					else
+						Data.TableLoaded = true
+					end
 				end
 				return true
 			end
 		end
 	elseif Data.InitTime == 0 then
 		Data.InitTime = Now()
-
+		d("["..selfslong.."] Pulling ")
 		self.cmd = io.popen([[PowerShell -Command "$ErrorActionPreference = """Stop"""; (New-Object System.Net.WebClient).DownloadString('https://xivapi.com/search?indexes=Action&filters=IsPlayerAction=1,ClassJobCategory.BLU=1&columns=Aspect,AttackTypeTargetID,CanTargetFriendly,CanTargetHostile,CanTargetParty,CanTargetSelf,TargetArea,AffectsPosition,Icon,ID,Name&sort_field=ID') | Out-File -Encoding ASCII -FilePath """]]..file..[[""""]]),{}
 
 	end
